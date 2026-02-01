@@ -77,18 +77,6 @@ class UserCollection(BaseModel):
 
     users: List[UserModel]
 
-async def get_count_by_shards(collection_name):
-    count_by_shards = {}
-    try:
-        stats = await db.command("collStats", collection_name, scale=1)
-        shards_info = stats.get("shards")
-        if shards_info:
-            for shard, value in shards_info.items():
-                count_by_shards[shard] = {"documents_count": value.get("count", 0)}
-    except Exception as e:
-        print(f"Cannot get shard stats: {e}")
-
-    return count_by_shards
 
 @app.get("/")
 async def root():
@@ -97,8 +85,7 @@ async def root():
     for collection_name in collection_names:
         collection = db.get_collection(collection_name)
         collections[collection_name] = {
-            "documents_count": await collection.count_documents({}),
-            "document_count_by_shards": await get_count_by_shards(collection_name)
+            "documents_count": await collection.count_documents({})
         }
     try:
         replica_status = await client.admin.command("replSetGetStatus")
@@ -145,9 +132,7 @@ async def collection_count(collection_name: str):
     items_count = await collection.count_documents({})
     # status = await client.admin.command('replSetGetStatus')
     # import ipdb; ipdb.set_trace()
-    return {"status": "OK",
-            "mongo_db": DATABASE_NAME,
-            "items_count": items_count}
+    return {"status": "OK", "mongo_db": DATABASE_NAME, "items_count": items_count}
 
 
 @app.get(
