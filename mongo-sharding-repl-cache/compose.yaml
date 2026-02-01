@@ -1,38 +1,13 @@
-name: mongo-sharding-repl-cache
+name: sharding-repl-cache
+
 services:
-  pymongo_api:
-    container_name: pymongo_api
-    build: 
-      context: api_app
-      dockerfile: Dockerfile
-    depends_on:
-      - configSrv
-      - shard1_1
-      - shard1_2
-      - shard1_3
-      - shard2_1
-      - shard2_2
-      - shard2_3
-      - mongos_router
-      - redis
-    networks:
-      - app-network
-    ports:
-      - 8080:8080
-    environment:
-      MONGODB_URL: "mongodb://mongos_router:27020"
-      MONGODB_DATABASE_NAME: "somedb"
-      REDIS_URL: "redis://redis:6379"
 
   configSrv:
-    image: mongo:latest
+    image: dh-mirror.gitverse.ru/mongo:latest
     container_name: configSrv
     restart: always
     ports:
       - "27017:27017"
-    networks:
-      app-network:
-        ipv4_address: 173.17.0.10
     volumes:
       - config-data:/data/db
     command:
@@ -49,15 +24,14 @@ services:
       interval: 5s
       start_period: 10s
 
-  shard1_1:
-    image: mongo:latest
-    container_name: shard1_1
+  shard1-main:
+    image: dh-mirror.gitverse.ru/mongo:latest
+    container_name: shard1
     restart: always
-    networks:
-      app-network:
-        ipv4_address: 173.17.0.9
+    ports:
+      - "27018:27018"
     volumes:
-      - shard1_1-data:/data/db
+      - shard1-data:/data/db
     command:
       [
         "--shardsvr",
@@ -72,15 +46,14 @@ services:
       interval: 5s
       start_period: 10s
 
-  shard1_2:
-    image: mongo:latest
-    container_name: shard1_2
+  shard1-replica1:
+    image: dh-mirror.gitverse.ru/mongo:latest
+    container_name: shard1replica1
     restart: always
-    networks:
-      app-network:
-        ipv4_address: 173.17.0.8
+    ports:
+      - "27040:27040"
     volumes:
-      - shard1_2-data:/data/db
+      - shard1-replica1-data:/data/db
     command:
       [
         "--shardsvr",
@@ -88,22 +61,21 @@ services:
         "shard1",
         "--bind_ip_all",
         "--port",
-        "27018"
+        "27040"
       ]
     healthcheck:
       test: [ "CMD", "mongo", "--eval", "db.adminCommand('ping')" ]
       interval: 5s
       start_period: 10s
 
-  shard1_3:
-    image: mongo:latest
-    container_name: shard1_3
+  shard1-replica2:
+    image: dh-mirror.gitverse.ru/mongo:latest
+    container_name: shard1replica2
     restart: always
-    networks:
-      app-network:
-        ipv4_address: 173.17.0.7
+    ports:
+      - "27041:27041"
     volumes:
-      - shard1_3-data:/data/db
+      - shard1-replica2-data:/data/db
     command:
       [
         "--shardsvr",
@@ -111,22 +83,21 @@ services:
         "shard1",
         "--bind_ip_all",
         "--port",
-        "27018"
+        "27041"
       ]
     healthcheck:
       test: [ "CMD", "mongo", "--eval", "db.adminCommand('ping')" ]
       interval: 5s
       start_period: 10s
 
-  shard2_1:
-    image: mongo:latest
-    container_name: shard2_1
+  shard2-main:
+    image: dh-mirror.gitverse.ru/mongo:latest
+    container_name: shard2
     restart: always
-    networks:
-      app-network:
-        ipv4_address: 173.17.0.6
+    ports:
+      - "27019:27019"
     volumes:
-      - shard2_1-data:/data/db
+      - shard2-data:/data/db
     command:
       [
         "--shardsvr",
@@ -134,22 +105,21 @@ services:
         "shard2",
         "--bind_ip_all",
         "--port",
-        "27018"
+        "27019"
       ]
     healthcheck:
       test: [ "CMD", "mongo", "--eval", "db.adminCommand('ping')" ]
       interval: 5s
       start_period: 10s
 
-  shard2_2:
-    image: mongo:latest
-    container_name: shard2_2
+  shard2-replica1:
+    image: dh-mirror.gitverse.ru/mongo:latest
+    container_name: shard2replica1
     restart: always
-    networks:
-      app-network:
-        ipv4_address: 173.17.0.5
+    ports:
+      - "27030:27030"
     volumes:
-      - shard2_2-data:/data/db
+      - shard2-replica1-data:/data/db
     command:
       [
         "--shardsvr",
@@ -157,22 +127,21 @@ services:
         "shard2",
         "--bind_ip_all",
         "--port",
-        "27018"
+        "27030"
       ]
     healthcheck:
       test: [ "CMD", "mongo", "--eval", "db.adminCommand('ping')" ]
       interval: 5s
       start_period: 10s
 
-  shard2_3:
-    image: mongo:latest
-    container_name: shard2_3
+  shard2-replica2:
+    image: dh-mirror.gitverse.ru/mongo:latest
+    container_name: shard2replica2
     restart: always
-    networks:
-      app-network:
-        ipv4_address: 173.17.0.4
+    ports:
+      - "27031:27031"
     volumes:
-      - shard2_3-data:/data/db
+      - shard2-replica2-data:/data/db
     command:
       [
         "--shardsvr",
@@ -180,7 +149,7 @@ services:
         "shard2",
         "--bind_ip_all",
         "--port",
-        "27018"
+        "27031"
       ]
     healthcheck:
       test: [ "CMD", "mongo", "--eval", "db.adminCommand('ping')" ]
@@ -189,14 +158,11 @@ services:
 
 
   mongos_router:
-    image: mongo:latest
+    image: dh-mirror.gitverse.ru/mongo:latest
     container_name: mongos_router
     restart: always
     ports:
       - "27020:27020"
-    networks:
-      app-network:
-        ipv4_address: 173.17.0.3
     command:
       [
         "mongos",
@@ -212,30 +178,32 @@ services:
       start_period: 10s
 
   redis:
-    image: "redis:latest"
+    image: redis:latest
     container_name: redis
     ports:
-      - "6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - app-network
+      - "6379:6379"
 
-networks:
-  app-network:
-    driver: bridge
-    ipam:
-      driver: default
-      config:
-        - subnet: 173.17.0.0/16
+  pymongo_api:
+    container_name: pymongo_api
+    build:
+      context: api_app
+      dockerfile: Dockerfile
+    depends_on:
+      - mongos_router
+      - redis
+    ports:
+      - 8080:8080
+    environment:
+      MONGODB_URL: "mongodb://mongos_router:27020"
+      MONGODB_DATABASE_NAME: "somedb"
+      REDIS_URL: "redis://redis:6379"
+
 
 volumes:
   config-data:
-  shard1_1-data:
-  shard1_2-data:
-  shard1_3-data:
-  shard2_1-data:
-  shard2_2-data:
-  shard2_3-data:
-  redis_data: { }
-
+  shard1-data:
+  shard1-replica1-data:
+  shard1-replica2-data:
+  shard2-data:
+  shard2-replica1-data:
+  shard2-replica2-data:
