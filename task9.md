@@ -4,11 +4,11 @@ ADR-9 Настройка чтения с реплик и консистентн�
 
 ### <a name="_hjk0fkfyohdk"></a>**Автор:**
 
-DanilaRazinkov
+Denis Marunich
 
 ### <a name="_uanumrh8zrui"></a>**Дата:**
 
-2025-08-3
+2025-02-01
 
 ## Решение
 
