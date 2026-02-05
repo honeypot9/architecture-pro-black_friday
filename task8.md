@@ -91,11 +91,45 @@ class ShardBalancer {
 
 #### Составной ключ для равномерного распределения:
 ```
-// Новая стратегия вместо шардирования только по category
+// Комбинированная стратегия: геозона + категория + хэш для равномерности
 sh.shardCollection("mobile_world.products", {
-  "category": 1,
-  "distribution_hash": "hashed"
+  "geo_zone": 1,          // Первичное разделение по регионам
+  "category": 1,          // Внутри региона - по категориям
+  "distribution_hash": "hashed"  // Равномерное распределение внутри категории
 });
+```
+
+#### Автоматическая настройка зон для популярных категорий
+```
+const configureZonedSharding = async () => {
+  const HOT_CATEGORIES = ["Электроника", "Смартфоны", "Ноутбуки"];
+  const REGIONS = ["msk", "spb", "ekb", "nsk", "vladivostok"];
+  
+  // 1. Создаем базовые географические зоны
+  REGIONS.forEach(region => {
+    const zoneTag = `zone_${region}`;
+    
+    sh.addTagRange(
+      "mobile_world.products",
+      { 
+        geo_zone: region,
+        category: MinKey,
+        brand: MinKey,
+        sku_hash: MinKey
+      },
+      { 
+        geo_zone: region,
+        category: MaxKey,
+        brand: MaxKey,
+        sku_hash: MaxKey
+      },
+      zoneTag
+    );
+    
+    // Привязываем шарды к географическим зонам
+    sh.addShardToZone(`shard_${region}_primary`, zoneTag);
+    sh.addShardToZone(`shard_${region}_secondary`, zoneTag);
+  });
 ```
 
 ## Мониторинг
